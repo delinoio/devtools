@@ -23,17 +23,17 @@ func main() {
 	}
 
 	// Parse commands
+	// Use sh -c to execute commands, which properly handles &&, ||, ;, pipes, etc.
 	commands := make([]*Command, 0, len(args))
 	for i, arg := range args {
-		parts := strings.Fields(arg)
-		if len(parts) == 0 {
+		if arg == "" {
 			continue
 		}
 
 		cmd := &Command{
 			Index:       i,
-			Name:        parts[0],
-			Args:        parts[1:],
+			Name:        "sh",
+			Args:        []string{"-c", arg},
 			FullCommand: arg,
 			Status:      StatusPending,
 			Output:      make([]string, 0),
@@ -65,23 +65,46 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Print final status
-	fmt.Println("\nFinal Status:")
+	// Print final status and logs
+	fmt.Println()
+	fmt.Println(strings.Repeat("=", 80))
+	fmt.Println("FINAL RESULTS")
+	fmt.Println(strings.Repeat("=", 80))
+
 	for _, cmd := range commands {
 		cmd.mu.RLock()
 		status := cmd.Status
 		exitCode := cmd.ExitCode
+		output := cmd.Output
 		cmd.mu.RUnlock()
 
+		// Print command header
+		fmt.Println()
 		statusStr := status.String()
-		if status == StatusSuccess {
-			fmt.Printf("✓ %s: %s\n", cmd.FullCommand, statusStr)
-		} else if status == StatusFailed {
-			fmt.Printf("✗ %s: %s (exit code: %d)\n", cmd.FullCommand, statusStr, exitCode)
+		switch status {
+		case StatusSuccess:
+			fmt.Printf("✓ %s [%s]\n", cmd.FullCommand, statusStr)
+		case StatusFailed:
+			fmt.Printf("✗ %s [%s ] (exit code: %d)\n", cmd.FullCommand, statusStr, exitCode)
+		default:
+			fmt.Printf("○ %s [%s]\n", cmd.FullCommand, statusStr)
+		}
+
+		// Print separator
+		fmt.Println(strings.Repeat("-", 80))
+
+		// Print output
+		if len(output) > 0 {
+			for _, line := range output {
+				fmt.Println(line)
+			}
 		} else {
-			fmt.Printf("○ %s: %s\n", cmd.FullCommand, statusStr)
+			fmt.Println("(no output)")
 		}
 	}
+
+	fmt.Println()
+	fmt.Println(strings.Repeat("=", 80))
 
 	// Exit with non-zero if any command failed
 	for _, cmd := range commands {
