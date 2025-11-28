@@ -9,23 +9,25 @@ import (
 )
 
 type model struct {
-	commands      []*Command
-	selectedIndex int
-	searchMode    bool
-	searchQuery   string
-	width         int
-	height        int
-	updates       chan CommandUpdate
-	quitting      bool
+	commands        []*Command
+	selectedIndex   int
+	searchMode      bool
+	searchQuery     string
+	width           int
+	height          int
+	updates         chan CommandUpdate
+	quitting        bool
+	continueOnError bool
 }
 
-func newModel(commands []*Command, updates chan CommandUpdate) model {
+func newModel(commands []*Command, updates chan CommandUpdate, continueOnError bool) model {
 	return model{
-		commands:      commands,
-		selectedIndex: 0,
-		searchMode:    false,
-		searchQuery:   "",
-		updates:       updates,
+		commands:        commands,
+		selectedIndex:   0,
+		searchMode:      false,
+		searchQuery:     "",
+		updates:         updates,
+		continueOnError: continueOnError,
 	}
 }
 
@@ -70,6 +72,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			cmd.mu.Unlock()
 		}
+
+		// If not continue-on-error mode and a command failed, exit immediately
+		if !m.continueOnError && msg.Type == UpdateComplete && msg.Status == StatusFailed {
+			m.quitting = true
+			return m, tea.Quit
+		}
+
+		// Check if all commands are complete
+		if m.allCommandsComplete() {
+			m.quitting = true
+			return m, tea.Quit
+		}
+
 		return m, waitForUpdate(m.updates)
 	}
 
@@ -258,4 +273,17 @@ func (m model) getStatusIcon(status CommandStatus) string {
 	default:
 		return "?"
 	}
+}
+
+func (m model) allCommandsComplete() bool {
+	for _, cmd := range m.commands {
+		cmd.mu.RLock()
+		status := cmd.Status
+		cmd.mu.RUnlock()
+
+		if status != StatusSuccess && status != StatusFailed {
+			return false
+		}
+	}
+	return true
 }
