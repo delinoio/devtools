@@ -63,13 +63,18 @@ func RunCommands(ctx context.Context, commands []*Command, updates chan<- Comman
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(commands))
 
+	// Create a cancellable context for fail-fast behavior
+	cmdCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	for _, cmd := range commands {
 		wg.Add(1)
 		go func(c *Command) {
 			defer wg.Done()
-			if err := runSingleCommand(ctx, c, updates); err != nil {
+			if err := runSingleCommand(cmdCtx, c, updates); err != nil {
 				if !continueOnError {
 					errChan <- err
+					cancel() // Cancel all other commands
 				}
 			}
 		}(cmd)
@@ -92,6 +97,13 @@ func RunCommands(ctx context.Context, commands []*Command, updates chan<- Comman
 }
 
 func runSingleCommand(ctx context.Context, cmd *Command, updates chan<- CommandUpdate) error {
+	// Check if context is already cancelled before starting
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	// Update status to running
 	cmd.mu.Lock()
 	cmd.Status = StatusRunning

@@ -58,7 +58,7 @@ func main() {
 	}()
 
 	// Create and run TUI
-	m := newModel(commands, updates)
+	m := newModel(commands, updates, *continueOnError)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error running program: %v\n", err)
@@ -85,7 +85,7 @@ func main() {
 		case StatusSuccess:
 			fmt.Printf("✓ %s [%s]\n", cmd.FullCommand, statusStr)
 		case StatusFailed:
-			fmt.Printf("✗ %s [%s ] (exit code: %d)\n", cmd.FullCommand, statusStr, exitCode)
+			fmt.Printf("✗ %s [%s] (exit code: %d)\n", cmd.FullCommand, statusStr, exitCode)
 		default:
 			fmt.Printf("○ %s [%s]\n", cmd.FullCommand, statusStr)
 		}
