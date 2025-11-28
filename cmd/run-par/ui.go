@@ -70,6 +70,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			cmd.mu.Unlock()
 		}
+
+		// Check if all commands are complete
+		if m.allCommandsComplete() {
+			m.quitting = true
+			return m, tea.Quit
+		}
+
 		return m, waitForUpdate(m.updates)
 	}
 
@@ -258,4 +265,17 @@ func (m model) getStatusIcon(status CommandStatus) string {
 	default:
 		return "?"
 	}
+}
+
+func (m model) allCommandsComplete() bool {
+	for _, cmd := range m.commands {
+		cmd.mu.RLock()
+		status := cmd.Status
+		cmd.mu.RUnlock()
+
+		if status != StatusSuccess && status != StatusFailed {
+			return false
+		}
+	}
+	return true
 }
