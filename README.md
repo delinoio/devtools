@@ -19,3 +19,9 @@ go install ./cmd/syncai
 Finds all `AGENTS.md` files in a Git repository and merges them into a single `CLAUDE.md` file. This allows hierarchical management of AI agent rules per directory.
 
 For detailed usage and examples, see [cmd/syncai/README.md](cmd/syncai/README.md).
+
+### run-par
+
+Runs multiple shell commands in parallel with a terminal user interface (TUI) that displays real-time output and status for each command.
+
+For detailed usage and examples, see [cmd/run-par/README.md](cmd/run-par/README.md).
