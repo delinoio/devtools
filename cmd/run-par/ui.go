@@ -148,7 +148,7 @@ func (m model) View() string {
 	}
 
 	// Calculate dimensions
-	sidebarWidth := m.width / 3
+	sidebarWidth := m.width * 4 / 15
 	if sidebarWidth < 20 {
 		sidebarWidth = 20
 	}
